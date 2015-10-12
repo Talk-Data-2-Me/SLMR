@@ -1,0 +1,161 @@
+### IMPORT PACKAGES ###
+
+import pandas as pd
+import numpy as np
+#import seaborn
+
+import time
+from datetime import datetime, date, time
+
+import statsmodels.api as sm
+
+from sklearn.datasets import load_boston
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import Imputer
+from sklearn.cross_validation import cross_val_score
+
+
+
+### READ IN DATA ###
+train = pd.read_csv(os.path.join('.','/Users/cece/documents/Python/Kaggle_Springleaf','train.csv'))
+
+
+
+### CONVERT CHAR TO NUM (NOT WHAT WE SHOULD DO FOR MODELING, BUT JUST TO TEST) ###
+
+# http://stackoverflow.com/questions/24458645/label-encoding-across-multiple-columns-in-scikit-learn
+# nice extension to labelEncoder
+# we can use this to convert letters into numbers ;)
+# just need to create list of categorical columns
+
+import pandas as pd
+import os
+from sklearn.preprocessing import LabelEncoder
+from sklearn.pipeline import Pipeline
+
+class MultiColumnLabelEncoder:
+    def __init__(self,columns = None):
+        self.columns = columns # array of column names to encode
+
+    def fit(self,X,y=None):
+        return self # not relevant here
+
+    def transform(self,X):
+        '''
+        Transforms columns of X specified in self.columns using
+        LabelEncoder(). If no columns specified, transforms all
+        columns in X.
+        '''
+        output = X.copy()
+        if self.columns is not None:
+            for col in self.columns:
+                output[col] = LabelEncoder().fit_transform(output[col])
+        else:
+            for colname,col in output.iteritems():
+                output[colname] = LabelEncoder().fit_transform(col)
+        return output
+
+    def fit_transform(self,X,y=None):
+        return self.fit(X,y).transform(X)
+
+# we need to implement handler function to check for numerical values
+# for now just the list of categorical fields
+train_non_cat = MultiColumnLabelEncoder(columns = ['VAR_0001',
+'VAR_0005',
+'VAR_0008',
+'VAR_0009',
+'VAR_0010',
+'VAR_0011',
+'VAR_0012',
+'VAR_0043',
+'VAR_0044',
+'VAR_0073',
+'VAR_0075',
+'VAR_0156',
+'VAR_0157',
+'VAR_0158',
+'VAR_0159',
+'VAR_0166',
+'VAR_0167',
+'VAR_0168',
+'VAR_0169',
+'VAR_0176',
+'VAR_0177',
+'VAR_0178',
+'VAR_0179',
+'VAR_0196',
+'VAR_0200',
+'VAR_0202',
+'VAR_0204',
+'VAR_0205',
+'VAR_0214',
+'VAR_0216',
+'VAR_0217',
+'VAR_0222',
+'VAR_0226',
+'VAR_0229',
+'VAR_0230',
+'VAR_0232',
+'VAR_0236',
+'VAR_0237',
+'VAR_0239',
+'VAR_0274',
+'VAR_0283',
+'VAR_0305',
+'VAR_0325',
+'VAR_0342',
+'VAR_0352',
+'VAR_0353',
+'VAR_0354',
+'VAR_0404',
+'VAR_0466',
+'VAR_0467',
+'VAR_0493',
+'VAR_1934']).fit_transform(train)
+
+
+
+### FILL MISSING VALUES (SHOULD NOT IMPUTE EVERY MISSING TO ZEROS, BUT JUST TO CHECK) ###
+
+train_non_cat.groupby(['target'])['target'].count()
+
+new_train = train_non_cat.fillna(0)
+
+y_train = train_non_cat['target']
+x_train = new_train
+x_train.drop(['target', 'ID'], axis=1, inplace=True)
+x_train.head()
+
+
+
+### SCALE DATA ###
+from sklearn.preprocessing import scale
+x_train = scale(x_train)
+
+
+
+### MODELING ###
+# Multiple methods with cross validtaion
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
+from sklearn.cross_validation import cross_val_score
+from sklearn.naive_bayes import GaussianNB
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+from sklearn.neighbors import KNeighborsClassifier
+
+names, accs = [],[]
+for algorithm in (LogisticRegression, 
+                  KNeighborsClassifier,
+                  GaussianNB,
+                  SVC,
+                  DecisionTreeClassifier,
+                  RandomForestClassifier):
+
+    accuracy = np.mean(cross_val_score(algorithm(), x_train, y_train, cv=10, scoring='accuracy')) #10-fold cross validation with 'accuracy/precision/recall/f1' as scores to output
+    print '%-30s %.4f' % (algorithm.__name__, accuracy)
+    names.append(algorithm.__name__)
+    accs.append(accuracy)
